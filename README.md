@@ -60,24 +60,21 @@ Before running the project, ensure you have the following installed:
 ```plaintext
 ppe-safetykit-detection/
 │
-├── data/
-│   ├── test_images/         # Test images for inference
-│   └── videos/              # Test videos for inference
+├── InputDemoVideo/           # Directory for input demo videos
+│   └── demo4.mp4             # Sample input video
 │
-├── models/
-│   └── yolov8.pth           # Pre-trained YOLOv8 weights
+├── OutputDemoVideos/         # Directory for output videos after detection
 │
-├── static/
-│   ├── css/                 # CSS files for frontend
-│   └── js/                  # JavaScript files for frontend
+├── predicted/                # Directory for storing predicted frames
 │
-├── templates/
-│   └── index.html           # HTML template for frontend
+├── best.pt                   # Pre-trained YOLOv8 weights (best version)
+├── yolov8m.pt                # Another set of YOLOv8 weights
 │
-├── detect.py                # Script for running YOLOv8 detection
-├── app.py                   # Flask application for serving frontend
-├── requirements.txt         # Python dependencies
-└── README.md                # Project README file
+├── cli.log                   # Log file for command line operations
+├── detect.py                 # Script to run YOLOv8 detection
+├── ppe_detection_kit.ipynb   # Jupyter notebook for further analysis and testing
+└── README.md                 # Project README file
+
 ```
 
 ## API References
