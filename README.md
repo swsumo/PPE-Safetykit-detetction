@@ -94,6 +94,10 @@ ppe-safetykit-detection/
 
 
 
+(AS GITHUB ONLY ALLOWS VIDEO LESS THAN THAT OF 10MB 
+USED Clideo -> to reduce the video size up to 5.6MB)
+
+
 https://github.com/user-attachments/assets/2c8a4361-ac55-4bbc-b00d-4b188bab8a0c
 
 
