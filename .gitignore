@@ -14,9 +14,12 @@ env/
 # Runtime database
 database.db
 
-# Base pretrained model (not needed at runtime, 50MB)
+# Base pretrained model (not needed at runtime)
 yolov8m.pt
+
+# ONNX exports — except the deployed model
 *.onnx
+!models/best.onnx
 
 # YOLO output directories
 runs/

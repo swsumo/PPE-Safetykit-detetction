@@ -11,18 +11,20 @@ from flask import (
     url_for, session, flash, jsonify,
 )
 from werkzeug.security import generate_password_hash, check_password_hash
-from ultralytics import YOLO
 from dotenv import load_dotenv
+from detector import PPEDetector
 
 load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "change-this-in-production")
 
-MODEL_PATH = Path("models/best.pt")
+MODEL_PATH = Path("models/best.onnx")
 if not MODEL_PATH.exists():
-    raise FileNotFoundError("best.pt not found. Place model weights in the project root.")
-model = YOLO(str(MODEL_PATH))
+    raise FileNotFoundError(
+        "models/best.onnx not found. Run: python export_onnx.py"
+    )
+model = PPEDetector(MODEL_PATH)
 
 # "protectuve boots" is a typo in the original dataset labels
 REQUIRED_PPE = {"protective helmet", "jacket", "glove", "protectuve boots"}
@@ -52,10 +54,8 @@ def login_required(f):
 
 
 def run_detection(image_bgr):
-    results = model.predict(image_bgr, conf=0.5, verbose=False)
-    detected = {results[0].names[int(b.cls)].lower() for b in results[0].boxes}
+    annotated, detected = model.predict(image_bgr)
     missing = REQUIRED_PPE - detected
-    annotated = results[0].plot()
     return annotated, detected, missing
 
 

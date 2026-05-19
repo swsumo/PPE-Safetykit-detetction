@@ -1,27 +1,22 @@
 # Web app
 flask>=3.0.0
 gunicorn>=21.0.0
+werkzeug>=3.0.0
 
-# Detection
-ultralytics>=8.0.0
+# ONNX inference (no PyTorch needed on the server)
+onnxruntime>=1.16.0
 
 # Image processing
 opencv-python-headless>=4.1.1
+numpy>=1.24.0
 
 # Utils
 python-dotenv>=1.0.0
-werkzeug>=3.0.0
 
-# Dataset management (training only)
-roboflow>=1.1.0
-
-# Export
-onnx>=1.14.0
-
-# Note: Install PyTorch separately based on your hardware.
-# CPU only:
+# ── Local development only (not needed on Render) ──────────────────
+# Training / CLI detect.py / exporting the model:
+#   pip install ultralytics roboflow
+# PyTorch (CPU):
 #   pip install torch torchvision
-# CUDA 11.8:
-#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
-# CUDA 12.1:
+# PyTorch (CUDA 12.1):
 #   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
