@@ -1,6 +1,10 @@
 # Environment - never commit secrets
 .env
 
+# Repo metadata (not needed in project)
+.gitattributes
+LICENSE
+
 # Virtual environment
 venv/
 env/

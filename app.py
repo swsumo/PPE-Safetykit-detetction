@@ -19,7 +19,7 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "change-this-in-production")
 
-MODEL_PATH = Path("best.pt")
+MODEL_PATH = Path("models/best.pt")
 if not MODEL_PATH.exists():
     raise FileNotFoundError("best.pt not found. Place model weights in the project root.")
 model = YOLO(str(MODEL_PATH))

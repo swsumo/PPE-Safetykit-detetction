@@ -16,7 +16,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="PPE Detection using YOLOv8")
     parser.add_argument("--source", type=str, default="0",
                         help="Video file, image, directory, or 0 for webcam")
-    parser.add_argument("--model", type=str, default="best.pt",
+    parser.add_argument("--model", type=str, default="models/best.pt",
                         help="Path to model weights (.pt file)")
     parser.add_argument("--conf", type=float, default=0.5,
                         help="Confidence threshold (default: 0.5)")
