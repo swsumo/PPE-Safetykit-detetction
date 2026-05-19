@@ -4,6 +4,7 @@
 # Repo metadata (not needed in project)
 .gitattributes
 LICENSE
+Procfile
 
 # Virtual environment
 venv/
