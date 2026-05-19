@@ -1,0 +1,36 @@
+# Environment - never commit secrets
+.env
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Runtime database
+database.db
+
+# Base pretrained model (not needed at runtime, 50MB)
+yolov8m.pt
+*.onnx
+
+# YOLO output directories
+runs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

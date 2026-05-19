@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — PPE Detector{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>PPE Detection</h1>
+    <p>Upload an image or use your camera to detect personal protective equipment.</p>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('upload', this)">Upload Image</button>
+    <button class="tab-btn"        onclick="switchTab('camera', this)">Live Camera</button>
+</div>
+
+<!-- ── Upload tab ─────────────────────────────────── -->
+<div id="tab-upload" class="tab-panel active">
+    <div class="card">
+        <form method="POST" action="{{ url_for('detect') }}" enctype="multipart/form-data" id="upload-form">
+            <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+                <div class="upload-icon">📸</div>
+                <p class="upload-text">Click to upload or drag &amp; drop</p>
+                <p class="upload-sub">JPG, PNG, WEBP supported</p>
+                <p class="upload-filename" id="file-name"></p>
+                <input type="file" id="file-input" name="image" accept=".jpg,.jpeg,.png,.webp"
+                       onchange="onFileSelect(this)" style="display:none" />
+            </div>
+            <button type="submit" class="btn btn-primary" id="detect-btn" disabled>
+                Detect PPE
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- ── Camera tab ─────────────────────────────────── -->
+<div id="tab-camera" class="tab-panel">
+    <div class="card">
+        <div class="camera-controls">
+            <button class="btn btn-primary" id="cam-btn" onclick="startCamera()" style="width:auto">
+                Start Camera
+            </button>
+            <button class="btn btn-danger" id="stop-btn" onclick="stopCamera()" style="display:none">
+                Stop Camera
+            </button>
+        </div>
+
+        <div class="camera-grid">
+            <div>
+                <p class="camera-label">Your Camera</p>
+                <div class="camera-box" id="webcam-box">
+                    <video id="webcam" autoplay playsinline muted style="display:none; transform:scaleX(-1)"></video>
+                    <div class="camera-placeholder" id="cam-placeholder">
+                        <div style="font-size:2rem;margin-bottom:8px">📷</div>
+                        <div>Camera not started</div>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <p class="camera-label">Detection Output</p>
+                <div class="camera-box" id="result-box">
+                    <img id="live-result" src="" alt="" style="display:none" />
+                    <div class="camera-placeholder" id="result-placeholder">
+                        <div style="font-size:2rem;margin-bottom:8px">🔍</div>
+                        <div>Waiting for camera...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="status-bar status-idle" id="live-status">
+            Start the camera to begin detection
+        </div>
+    </div>
+</div>
+
+<!-- Hidden canvas for frame capture -->
+<canvas id="capture" style="display:none"></canvas>
+
+<script>
+/* ── Tabs ─────────────────────────────────────────── */
+function switchTab(name, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    btn.classList.add('active');
+}
+
+/* ── Upload ───────────────────────────────────────── */
+function onFileSelect(input) {
+    const file = input.files[0];
+    if (file) {
+        document.getElementById('file-name').textContent = file.name;
+        document.getElementById('detect-btn').disabled = false;
+    }
+}
+
+const dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) {
+        const input = document.getElementById('file-input');
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        input.files = dt.files;
+        onFileSelect(input);
+    }
+});
+
+/* ── Live camera ──────────────────────────────────── */
+let stream = null;
+let running = false;
+let detecting = false;
+
+async function startCamera() {
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+        const video = document.getElementById('webcam');
+        video.srcObject = stream;
+        video.style.display = 'block';
+        document.getElementById('cam-placeholder').style.display = 'none';
+
+        document.getElementById('cam-btn').style.display  = 'none';
+        document.getElementById('stop-btn').style.display = 'inline-flex';
+
+        running = true;
+        detectLoop();
+    } catch (err) {
+        alert('Camera error: ' + err.message + '\n\nMake sure you are on HTTPS or localhost.');
+    }
+}
+
+function stopCamera() {
+    running = false;
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+
+    const video = document.getElementById('webcam');
+    video.srcObject = null;
+    video.style.display = 'none';
+    document.getElementById('cam-placeholder').style.display = 'flex';
+
+    const resultImg = document.getElementById('live-result');
+    resultImg.src = '';
+    resultImg.style.display = 'none';
+    document.getElementById('result-placeholder').style.display = 'flex';
+
+    document.getElementById('live-status').className  = 'status-bar status-idle';
+    document.getElementById('live-status').textContent = 'Camera stopped';
+
+    document.getElementById('cam-btn').style.display  = 'inline-flex';
+    document.getElementById('stop-btn').style.display = 'none';
+}
+
+async function detectLoop() {
+    if (!running) return;
+    if (detecting) { setTimeout(detectLoop, 80); return; }
+
+    const video = document.getElementById('webcam');
+    if (!video.videoWidth) { setTimeout(detectLoop, 100); return; }
+
+    const canvas = document.getElementById('capture');
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.save();
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, -canvas.width, 0);
+    ctx.restore();
+    const frameData = canvas.toDataURL('image/jpeg', 0.6);
+
+    detecting = true;
+    try {
+        const resp = await fetch('/detect_frame', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ frame: frameData }),
+        });
+        const data = await resp.json();
+
+        const resultImg = document.getElementById('live-result');
+        resultImg.src = data.annotated;
+        resultImg.style.display = 'block';
+        document.getElementById('result-placeholder').style.display = 'none';
+
+        const statusEl = document.getElementById('live-status');
+        if (data.missing.length === 0) {
+            statusEl.className   = 'status-bar status-ok';
+            statusEl.textContent = '✓ All required PPE detected';
+        } else {
+            const list = data.missing.map(s =>
+                s.split(' ').map(w => w[0].toUpperCase() + w.slice(1)).join(' ')
+            ).join(', ');
+            statusEl.className   = 'status-bar status-missing';
+            statusEl.textContent = '✗ Missing: ' + list;
+        }
+    } catch (e) {
+        console.error('Detection error:', e);
+    }
+    detecting = false;
+    setTimeout(detectLoop, 50);
+}
+</script>
+{% endblock %}

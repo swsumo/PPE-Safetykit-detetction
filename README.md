@@ -1,105 +1,124 @@
-# PPE-Safetykit-detetction
+# PPE Detection using YOLOv8
 
+A real-time Personal Protective Equipment (PPE) detection system built with YOLOv8m, capable of detecting safety gear on workers from video feeds, images, or webcam.
 
-## Overview
+## Detected Classes
 
-This project is designed to detect Personal Protective Equipment (PPE) and safety kits using a YOLOv8 model. The model is trained and deployed using the Ultralytics YOLOv8 framework and integrates with an HTML-based frontend for displaying detection results.
-
-## Features
-
-- **PPE Detection**: Detects various types of personal protective equipment, such as helmets, vests, gloves, and more.
-- **Real-Time Detection**: Provides real-time detection of PPE items using the YOLOv8 model.
-- **Easy Deployment**: Utilizes the Ultralytics YOLOv8 framework for easy model deployment and management.
-- **Web-based Interface**: A user-friendly HTML frontend to visualize and interact with the detection results.
-
-## Getting Started
-
-### Prerequisites
-
-Before running the project, ensure you have the following installed:
-
-- Python 3.7+
-- Ultralytics YOLOv8 (`ultralytics`)
-- OpenCV
-- Flask (for serving the frontend, if necessary)
-
-### Installation
-
-1. **Clone the Repository**:
-    ```bash
-    git clone https://github.com/yourusername/ppe-safetykit-detection.git
-    cd ppe-safetykit-detection
-    ```
-
-2. **Install Dependencies**:
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-3. **Download YOLOv8 Weights**:
-    - Download the pre-trained YOLOv8 weights from the [Ultralytics YOLOv8 Model Zoo](https://github.com/ultralytics/ultralytics#model-zoo).
-    - Place the weights file in the `models/` directory.
-
-### Running the Project
-
-1. **Model Inference**:
-    - Run the detection script to perform inference on images or videos:
-    ```bash
-    python detect.py --weights models/yolov8.pth --source data/test_images
-    ```
-
-2. **Web Frontend**:
-    - Serve the HTML frontend to visualize the results:
-    ```bash
-    flask run
-    ```
-    - Access the web interface at `http://127.0.0.1:5000/`.
+| Class | mAP50 |
+|---|---|
+| Protective Boots | 0.990 |
+| Protective Helmet | 0.975 |
+| Dust Mask | 0.963 |
+| Glove | 0.937 |
+| Jacket | 0.935 |
+| Eye Wear | 0.849 |
+| Shield | 0.639 |
+| **Overall** | **0.898** |
 
 ## Project Structure
 
-```plaintext
-ppe-safetykit-detection/
-│
-├── InputDemoVideo/           # Directory for input demo videos
-│   └── demo4.mp4             # Sample input video
-│
-├── OutputDemoVideos/         # Directory for output videos after detection
-│
-├── predicted/                # Directory for storing predicted frames
-│
-├── best.pt                   # Pre-trained YOLOv8 weights (best version)
-├── yolov8m.pt                # Another set of YOLOv8 weights
-│
-├── cli.log                   # Log file for command line operations
-├── detect.py                 # Script to run YOLOv8 detection
-├── ppe_detection_kit.ipynb   # Jupyter notebook for further analysis and testing
-└── README.md                 # Project README file
-
+```
+kit_detect/
+├── best.pt                    # Trained YOLOv8m weights
+├── yolov8m.pt                 # Base YOLOv8m pretrained weights
+├── detect.py                  # Inference script
+├── ppe_detection_kit.ipynb    # Training notebook (Google Colab)
+├── requirements.txt
+├── .env                       # API keys (not committed)
+├── .env.example               # Template for .env
+├── .gitignore
+├── InputDemoVideo/            # Sample input videos
+├── OutputDemoVideos/          # Sample output videos with detections
+└── predicted/                 # Validation metrics and sample predictions
 ```
 
-## API References
+## Setup
 
-### Ultralytics YOLOv8
+### 1. Clone and install dependencies
 
-- **Website**: [Ultralytics](https://ultralytics.com)
-- **Documentation**: [YOLOv8 Documentation](https://docs.ultralytics.com)
+```bash
+git clone <repo-url>
+cd kit_detect
+pip install -r requirements.txt
+```
 
+Install PyTorch for your hardware (choose one):
 
+```bash
+# CPU only
+pip install torch torchvision
 
-## Acknowledgments
+# CUDA 11.8
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
 
-- **Ultralytics** for the YOLOv8 framework.
-- **OpenCV** for image processing.
-- **Flask** for the web framework.
+# CUDA 12.1
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+```
 
+### 2. Set up environment variables
 
+```bash
+cp .env.example .env
+# Edit .env and add your Roboflow API key (needed for training only)
+```
 
-(AS GITHUB ONLY ALLOWS VIDEO LESS THAN THAT OF 10MB 
-USED Clideo -> to reduce the video size up to 5.6MB)
+### 3. Download model weights
 
+The trained model `best.pt` (~50MB) is required for inference. Place it in the project root.
 
-https://github.com/user-attachments/assets/2c8a4361-ac55-4bbc-b00d-4b188bab8a0c
+## Usage
 
+### Run on a video file
 
+```bash
+python detect.py --source InputDemoVideo/demo.mp4 --conf 0.3 --save
+```
 
+### Run on webcam
 
+```bash
+python detect.py --source 0
+```
+
+### Run on an image
+
+```bash
+python detect.py --source path/to/image.jpg --save
+```
+
+### All options
+
+```
+--source    Source: video file, image, directory, or 0 for webcam (default: 0)
+--model     Path to model weights (default: best.pt)
+--conf      Confidence threshold 0.0-1.0 (default: 0.3)
+--save      Save output to disk
+--no-show   Disable real-time display window
+```
+
+## Training
+
+Open `ppe_detection_kit.ipynb` in Google Colab. The notebook covers:
+
+1. Environment setup (GPU check, dependency install)
+2. Dataset download from Roboflow (requires `ROBOFLOW_API_KEY` in `.env`)
+3. YOLOv8m fine-tuning for 90 epochs
+4. Validation and metric visualization
+5. Inference on test images and videos
+6. ONNX export
+
+## Model Export (ONNX)
+
+```bash
+yolo export model=best.pt format=onnx
+```
+
+## Dataset
+
+- Source: [Roboflow](https://roboflow.com) — `objet-detect-yolov5 / eep_detection-u9bbd v1`
+- Format: YOLOv5 PyTorch
+- ~6,482 images across train/valid/test splits
+
+## Results
+
+Training curves and validation predictions are saved in the `predicted/` folder.

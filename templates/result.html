@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Detection Result — PPE Detector{% endblock %}
+
+{% block content %}
+
+<!-- Status banner -->
+{% if missing %}
+<div class="result-banner result-unsafe">
+    ✗ Incomplete — {{ missing | length }} required item{{ 's' if missing | length > 1 }} missing
+</div>
+{% else %}
+<div class="result-banner result-safe">
+    ✓ Safe — All required PPE detected
+</div>
+{% endif %}
+
+<!-- Side-by-side images -->
+<div class="result-grid">
+    <div class="result-img-card">
+        <img src="data:image/jpeg;base64,{{ original }}" alt="Original image" />
+        <div class="result-img-label">Original</div>
+    </div>
+    <div class="result-img-card">
+        <img src="data:image/jpeg;base64,{{ annotated }}" alt="Annotated image" />
+        <div class="result-img-label">Detections</div>
+    </div>
+</div>
+
+<!-- PPE summary -->
+<div class="ppe-summary card">
+    {% if missing %}
+    <h3>Missing PPE</h3>
+    <div class="badge-list" style="margin-bottom: 20px">
+        {% for item in missing %}
+        <span class="badge badge-missing">✗ {{ item.title() }}</span>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <h3>Detected</h3>
+    <div class="badge-list">
+        {% if detected %}
+            {% for item in detected %}
+            <span class="badge badge-ok">✓ {{ item.title() }}</span>
+            {% endfor %}
+        {% else %}
+            <span style="color: var(--text-muted); font-size: 0.9rem">Nothing detected — try a lower confidence or a clearer image.</span>
+        {% endif %}
+    </div>
+</div>
+
+<a href="{{ url_for('dashboard') }}" class="btn btn-outline" style="width:auto">
+    ← Back to Dashboard
+</a>
+
+{% endblock %}
