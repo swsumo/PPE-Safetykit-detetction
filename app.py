@@ -2,6 +2,7 @@ import os
 import base64
 import sqlite3
 import threading
+import time
 from pathlib import Path
 from functools import wraps
 from uuid import uuid4
@@ -26,6 +27,20 @@ app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 200MB upload cap
 ALLOWED_VIDEO_EXT = {".mp4", ".avi", ".mov", ".mkv", ".webm"}
 PROCESSED_DIR = Path("static/processed")
 PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+
+# We don't keep users' videos — storage is limited. Processed output is
+# only kept long enough to view/download, then swept away automatically.
+PROCESSED_VIDEO_TTL_SECONDS = 30 * 60
+
+
+def cleanup_old_processed_videos():
+    cutoff = time.time() - PROCESSED_VIDEO_TTL_SECONDS
+    for f in PROCESSED_DIR.glob("*.mp4"):
+        try:
+            if f.stat().st_mtime < cutoff:
+                f.unlink()
+        except OSError:
+            pass
 
 # In-memory job tracking for background video processing.
 # Fine for a single-process student deployment; wouldn't survive a
@@ -254,6 +269,8 @@ def detect():
 @app.route("/detect_video", methods=["POST"])
 @login_required
 def detect_video():
+    cleanup_old_processed_videos()
+
     if "video" not in request.files or not request.files["video"].filename:
         return jsonify({"error": "Please select a video file."}), 400
 
