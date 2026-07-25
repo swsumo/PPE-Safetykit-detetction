@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Video Detection Result — PPE Detector{% endblock %}
+
+{% block content %}
+
+{% if ever_missing %}
+<div class="result-banner result-unsafe">
+    ✗ {{ ever_missing | length }} required item{{ 's' if ever_missing | length > 1 }} missing at some point in this video
+</div>
+{% else %}
+<div class="result-banner result-safe">
+    ✓ Safe — required PPE detected throughout
+</div>
+{% endif %}
+
+<div class="card" style="margin-bottom: 24px; padding: 0; overflow: hidden;">
+    <video controls style="width: 100%; display: block;">
+        <source src="{{ video_url }}" type="video/mp4">
+        Your browser can't preview this video inline — use the download link below.
+    </video>
+</div>
+
+<div class="ppe-summary card">
+    <h3>Summary</h3>
+    <p style="color: var(--text-muted); margin-bottom: 20px;">
+        {{ frame_count }} frame{{ 's' if frame_count != 1 }} processed ·
+        {{ compliant_pct }}% fully compliant
+    </p>
+
+    {% if ever_missing %}
+    <h3>Missing at some point</h3>
+    <div class="badge-list" style="margin-bottom: 20px">
+        {% for item in ever_missing %}
+        <span class="badge badge-missing">✗ {{ item.title() }}</span>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <h3>Detected</h3>
+    <div class="badge-list">
+        {% if ever_detected %}
+            {% for item in ever_detected %}
+            <span class="badge badge-ok">✓ {{ item.title() }}</span>
+            {% endfor %}
+        {% else %}
+            <span style="color: var(--text-muted); font-size: 0.9rem">Nothing detected — try a lower confidence.</span>
+        {% endif %}
+    </div>
+</div>
+
+<div style="display: flex; gap: 12px; flex-wrap: wrap;">
+    <a href="{{ video_url }}" download class="btn btn-outline" style="width:auto">⬇ Download processed video</a>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline" style="width:auto">← Back to Dashboard</a>
+</div>
+
+{% endblock %}

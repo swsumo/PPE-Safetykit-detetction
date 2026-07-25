@@ -10,6 +10,11 @@ onnxruntime>=1.16.0
 opencv-python-headless>=4.1.1
 numpy>=1.24.0
 
+# Browser-playable (H.264) video output — cv2.VideoWriter's mp4v codec
+# doesn't play inline in Chrome/Firefox, only libx264 does
+imageio>=2.34.0
+imageio-ffmpeg>=0.4.9
+
 # Utils
 python-dotenv>=1.0.0
 

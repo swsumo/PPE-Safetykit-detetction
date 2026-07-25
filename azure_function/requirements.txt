@@ -1,0 +1,4 @@
+azure-functions
+onnxruntime
+opencv-python-headless
+numpy

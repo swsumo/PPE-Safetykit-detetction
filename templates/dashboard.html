@@ -7,27 +7,61 @@
     <p>Upload an image or use your camera to detect personal protective equipment.</p>
 </div>
 
+<div class="confidence-control">
+    <label for="conf-slider">Confidence</label>
+    <input type="range" id="conf-slider" min="0.10" max="0.90" step="0.05" value="0.30"
+           oninput="onConfChange(this.value)" />
+    <span class="confidence-value" id="conf-value">0.30</span>
+</div>
+
 <!-- Tabs -->
 <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('upload', this)">Upload Image</button>
-    <button class="tab-btn"        onclick="switchTab('camera', this)">Live Camera</button>
+    <button class="tab-btn"        onclick="switchTab('video', this)">Upload Video</button>
+    <button class="tab-btn"        onclick="switchTab('camera', this)">Live Camera <span class="tab-hint">Do try!</span></button>
 </div>
 
 <!-- ── Upload tab ─────────────────────────────────── -->
 <div id="tab-upload" class="tab-panel active">
     <div class="card">
         <form method="POST" action="{{ url_for('detect') }}" enctype="multipart/form-data" id="upload-form">
-            <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+            <div class="upload-zone" id="drop-zone">
                 <div class="upload-icon">📸</div>
                 <p class="upload-text">Click to upload or drag &amp; drop</p>
                 <p class="upload-sub">JPG, PNG, WEBP supported</p>
                 <p class="upload-filename" id="file-name"></p>
-                <input type="file" id="file-input" name="image" accept=".jpg,.jpeg,.png,.webp"
-                       onchange="onFileSelect(this)" style="display:none" />
+                <input type="file" id="file-input" name="image" accept=".jpg,.jpeg,.png,.webp" style="display:none" />
             </div>
+            <input type="hidden" name="conf" id="conf-hidden" value="0.30" />
             <button type="submit" class="btn btn-primary" id="detect-btn" disabled>
                 Detect PPE
             </button>
+        </form>
+    </div>
+</div>
+
+<!-- ── Video tab ──────────────────────────────────── -->
+<div id="tab-video" class="tab-panel">
+    <div class="card">
+        <form method="POST" action="{{ url_for('detect_video') }}" enctype="multipart/form-data" id="video-form">
+            <div class="upload-zone" id="video-drop-zone">
+                <div class="upload-icon">🎬</div>
+                <p class="upload-text">Click to upload or drag &amp; drop a video</p>
+                <p class="upload-sub">MP4, AVI, MOV, MKV, WEBM supported</p>
+                <p class="upload-sub">Please upload short/small videos — this is a student project running on CPU, so processing takes time.</p>
+                <p class="upload-filename" id="video-file-name"></p>
+                <input type="file" id="video-file-input" name="video" accept=".mp4,.avi,.mov,.mkv,.webm" style="display:none" />
+            </div>
+            <input type="hidden" name="conf" id="conf-hidden-video" value="0.30" />
+            <button type="submit" class="btn btn-primary" id="video-detect-btn" disabled>
+                Detect PPE in Video
+            </button>
+            <div class="progress-wrap" id="video-progress-wrap" style="display:none">
+                <div class="progress-track">
+                    <div class="progress-fill" id="video-progress-fill" style="width:0%"></div>
+                </div>
+                <p class="progress-text" id="video-progress-text">0% processed</p>
+            </div>
         </form>
     </div>
 </div>
@@ -77,6 +111,13 @@
 <canvas id="capture" style="display:none"></canvas>
 
 <script>
+/* ── Confidence slider ────────────────────────────── */
+function onConfChange(value) {
+    document.getElementById('conf-value').textContent = parseFloat(value).toFixed(2);
+    document.getElementById('conf-hidden').value = value;
+    document.getElementById('conf-hidden-video').value = value;
+}
+
 /* ── Tabs ─────────────────────────────────────────── */
 function switchTab(name, btn) {
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -85,29 +126,106 @@ function switchTab(name, btn) {
     btn.classList.add('active');
 }
 
-/* ── Upload ───────────────────────────────────────── */
-function onFileSelect(input) {
-    const file = input.files[0];
-    if (file) {
-        document.getElementById('file-name').textContent = file.name;
-        document.getElementById('detect-btn').disabled = false;
+/* ── Upload dropzones (image + video) ────────────────*/
+function setupDropzone(zoneId, inputId, nameId, btnId) {
+    const zone = document.getElementById(zoneId);
+    const input = document.getElementById(inputId);
+
+    function onSelect() {
+        const file = input.files[0];
+        if (file) {
+            document.getElementById(nameId).textContent = file.name;
+            document.getElementById(btnId).disabled = false;
+        }
     }
+
+    input.addEventListener('change', onSelect);
+    zone.addEventListener('click', () => input.click());
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+    zone.addEventListener('drop', e => {
+        e.preventDefault();
+        zone.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file) {
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            input.files = dt.files;
+            onSelect();
+        }
+    });
 }
 
-const dropZone = document.getElementById('drop-zone');
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-dropZone.addEventListener('drop', e => {
-    e.preventDefault();
-    dropZone.classList.remove('dragover');
-    const file = e.dataTransfer.files[0];
-    if (file) {
-        const input = document.getElementById('file-input');
-        const dt = new DataTransfer();
-        dt.items.add(file);
-        input.files = dt.files;
-        onFileSelect(input);
+setupDropzone('drop-zone', 'file-input', 'file-name', 'detect-btn');
+setupDropzone('video-drop-zone', 'video-file-input', 'video-file-name', 'video-detect-btn');
+
+/* ── Video upload + progress polling ─────────────────*/
+const videoForm       = document.getElementById('video-form');
+const videoBtn         = document.getElementById('video-detect-btn');
+const videoProgressWrap = document.getElementById('video-progress-wrap');
+const videoProgressFill = document.getElementById('video-progress-fill');
+const videoProgressText = document.getElementById('video-progress-text');
+
+function resetVideoForm() {
+    videoBtn.disabled = false;
+    videoBtn.textContent = 'Detect PPE in Video';
+    videoProgressWrap.style.display = 'none';
+    videoProgressFill.style.width = '0%';
+}
+
+async function pollVideoStatus(jobId) {
+    let status;
+    try {
+        const resp = await fetch(`/video_status/${jobId}`);
+        status = await resp.json();
+    } catch (e) {
+        setTimeout(() => pollVideoStatus(jobId), 1500);
+        return;
     }
+
+    if (status.status === 'error') {
+        alert('Processing failed: ' + (status.error || 'unknown error'));
+        resetVideoForm();
+        return;
+    }
+
+    const pct = status.progress || 0;
+    videoProgressFill.style.width = pct + '%';
+    videoProgressText.textContent = pct + '% processed';
+
+    if (status.status === 'done') {
+        videoProgressText.textContent = 'Done — loading result…';
+        window.location.href = `/video_result/${jobId}`;
+        return;
+    }
+
+    setTimeout(() => pollVideoStatus(jobId), 1000);
+}
+
+videoForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    videoBtn.disabled = true;
+    videoBtn.textContent = 'Uploading…';
+    videoProgressWrap.style.display = 'block';
+    videoProgressFill.style.width = '0%';
+    videoProgressText.textContent = 'Uploading video…';
+
+    const formData = new FormData(videoForm);
+    let data;
+    try {
+        const resp = await fetch(videoForm.action, { method: 'POST', body: formData });
+        data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || 'Upload failed');
+    } catch (err) {
+        alert(err.message);
+        resetVideoForm();
+        return;
+    }
+
+    videoBtn.textContent = 'Processing…';
+    videoProgressText.textContent = '0% processed';
+    pollVideoStatus(data.job_id);
 });
 
 /* ── Live camera ──────────────────────────────────── */
@@ -173,10 +291,11 @@ async function detectLoop() {
 
     detecting = true;
     try {
+        const conf = document.getElementById('conf-slider').value;
         const resp = await fetch('/detect_frame', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ frame: frameData }),
+            body: JSON.stringify({ frame: frameData, conf: conf }),
         });
         const data = await resp.json();
 

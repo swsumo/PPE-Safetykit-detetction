@@ -1,5 +1,8 @@
 # Environment - never commit secrets
 .env
+azure_function/local.settings.json
+azure_function/model/
+azure_function/.python_packages/
 
 # Repo metadata (not needed in project)
 .gitattributes
@@ -13,6 +16,9 @@ env/
 
 # Runtime database
 database.db
+
+# Server-generated processed videos
+static/processed/
 
 # Base pretrained model (not needed at runtime)
 yolov8m.pt
